@@ -3,12 +3,51 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import Homepage from "./pages/Homepage";
+import {BrowserRouter as Router, Route, Routes} from "react-router-dom";
+import ResponsiveAppBar from "./components/ResponsiveAppBar";
+import {ApolloClient, ApolloProvider, createHttpLink, InMemoryCache} from "@apollo/client";
+import {setContext} from "@apollo/client/link/context";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
+const httpLink = createHttpLink({
+    uri: process.env.REACT_APP_WARCRAFTLOGS_URI,
+});
+
+const authLink = setContext((_, {headers}) => {
+    const token = process.env.REACT_APP_WARCRAFTLOGS_BEARER;
+    return {
+        headers: {
+            ...headers,
+            authorization: "Bearer " + token,
+        }
+    }
+});
+
+const client = new ApolloClient({
+    link: authLink.concat(httpLink),
+    cache: new InMemoryCache()
+});
+
+
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    <div>
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+        />
+
+        <ApolloProvider client={client}>
+            <Router>
+                <ResponsiveAppBar/>
+                <Routes>
+                    <Route path="/" element={<Homepage client={client}/>}/>
+                    <Route path="/app" element={<App/>}/>
+                </Routes>
+            </Router>
+        </ApolloProvider>
+    </div>
 );
 
 // If you want to start measuring performance in your app, pass a function
