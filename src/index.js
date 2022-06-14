@@ -8,6 +8,7 @@ import {BrowserRouter as Router, Route, Routes} from "react-router-dom";
 import ResponsiveAppBar from "./components/ResponsiveAppBar";
 import {ApolloClient, ApolloProvider, createHttpLink, InMemoryCache} from "@apollo/client";
 import {setContext} from "@apollo/client/link/context";
+import LogPage from "./pages/LogPage";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -44,6 +45,7 @@ root.render(
                 <Routes>
                     <Route path="/" element={<Homepage client={client}/>}/>
                     <Route path="/app" element={<App/>}/>
+                    <Route path="/logpage" element={<LogPage/>}/>
                 </Routes>
             </Router>
         </ApolloProvider>
