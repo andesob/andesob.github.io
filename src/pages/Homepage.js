@@ -21,11 +21,6 @@ function Homepage() {
         console.log("Input code is: " + event.target.value);
     }
 
-    // const handleOnClick = useCallback((code: logCode) => {
-    //     console.log(logCode);
-    //     // navigate('/logpage', {state: {code: code}});
-    // }, [navigate]);
-
     const navigate = useNavigate();
     return (
         <Container maxWidth={'95%'}>

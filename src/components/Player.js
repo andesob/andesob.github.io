@@ -13,6 +13,7 @@ function Player(props) {
     let trinkets = props.trinkets;
     let items = props.items;
     let playerClass = props.playerClass;
+    const auras = props.auras;
     // let spec = props.spec;
 }
 

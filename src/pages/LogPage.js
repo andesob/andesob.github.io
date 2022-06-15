@@ -12,24 +12,34 @@ function LogPage() {
     const location = useLocation();
     const logCode = location.state.code;
     console.log(location.state.code);
-
-    let assocArray = getPlayerInformation(logCode);
-    if (!assocArray) {
+    const fightIds = getAllFightInformation(logCode);
+    const playerMap = getPlayerInformation(logCode);
+    const temp = getEventInformation(logCode, 9, fightIds);
+    if (!temp || !playerMap) {
         return 'Hold up';
     }
 
-    const arr = Array.from(assocArray, ([key, value]) => {
-        return Array.from(value, ([key, value]) => {
-            return value;
-        });
+    let playerClassMap = temp[0];
+
+    parseCombatantInfo(playerMap, temp);
+
+    console.log(playerMap);
+
+    const arr = Array.from(playerMap, ([key, value]) => {
+        return <Player id={value.get('id')} name={value.get('name')} playerClass={value.get('playerClass')} auras={value.get('auras')}/>;
     });
+
     console.log(arr);
     let renderArr = [];
-    arr.forEach((playerClass) => {
-        playerClass.forEach((player) => {
-            renderArr.push(<Grid item key={player.props.id}> {player.props.name} </Grid>);
-        })
+    arr.forEach((player) => {
+        const gridRow = <>
+            <Grid item xs={2} key={player.props.name}> {player.props.name} </Grid>
+            <Grid item xs={2} key={"class" + player.props.id}> {player.props.playerClass} </Grid>
+            <Grid item xs={8} key={"aura" + player.props.id}> {player.props.auras.length} </Grid>
+        </>;
+        renderArr.push(gridRow);
     })
+    // console.log(renderArr);
     return (
         <Container maxWidth={'95%'}>
             <Box display="flex" justifyContent="center" paddingY={2}>
@@ -38,12 +48,27 @@ function LogPage() {
                         Insert link to warcraftlogs report in the field below. Currently only TBC logs are accepted.
                     </Typography>
                     <TextField id="filled-basic" variant="filled" hiddenLabel size="small" sx={{width: 1 / 2}}/>
-                    <Button variant="contained" >
+                    <Button variant="contained">
                         <Typography>
                             Analyze
                         </Typography>
                     </Button>
-                    <Grid container spacing={2}>
+                    <Grid key={"GridContainer"} container spacing={2}>
+                        <Grid item xs={2} key={"GridHeaderName"}>
+                            <Typography variant={"h5"}>
+                                Player
+                            </Typography>
+                        </Grid>
+                        <Grid item xs={2} key={"GridHeaderClass"}>
+                            <Typography variant={"h5"}>
+                                Class
+                            </Typography>
+                        </Grid>
+                        <Grid item xs={8} key={"GridHeaderAuras"}>
+                            <Typography variant={"h5"}>
+                                Auras
+                            </Typography>
+                        </Grid>
                         {renderArr}
                     </Grid>
                 </Stack>
@@ -67,26 +92,152 @@ function getPlayerInformation(logCode) {
     }
 
     const playerData = data.reportData.report.playerDetails.data.playerDetails;
+    let playerClassList = new Map();
     let playerList = new Map();
-
     for(const key in playerData){
         playerData[key].forEach((player) => {
-            if (!playerList.has(player.type)){
-                playerList.set(player.type, new Map());
-                playerList.get(player.type).set(player.name, <Player id={player.id} name={player.name} playerClass={player.type}/>);
+            // const playerObj = <Player id={player.id} name={player.name} playerClass={player.type}/>;
+            const playerObj = {id: player.id, name: player.name, playerClass: player.type, auras: []};
+            const playerObjMap = new Map(Object.entries(playerObj));
+            playerList.set(player.id, playerObjMap);
+
+            if (!playerClassList.has(player.type)) {
+                playerClassList.set(player.type, new Map());
+                playerClassList.get(player.type).set(player.name, playerObjMap);
             } else {
-                if (!playerList.get(player.type).has(player.id)) {
-                    playerList.get(player.type).set(player.name, <Player id={player.id} name={player.name} playerClass={player.type}/>);
+                if (!playerClassList.get(player.type).has(player.id)) {
+                    playerClassList.get(player.type).set(player.name, playerObjMap);
                 }
             }
         });
     }
 
-    for (const key of playerList.keys()) {
-        playerList.set(key, new Map([...playerList.get(key)].sort()));
+    for (const key of playerClassList.keys()) {
+        playerClassList.set(key, new Map([...playerClassList.get(key)].sort()));
     }
 
-    return new Map([...playerList].sort());
+    return playerList;
+}
+
+function getTableInformation(logCode, playerID) {
+    const TABLE_QUERY = gql`
+    {
+	reportData{
+		report(code:"${logCode}"){
+			table(startTime:386982, endTime:13327785)
+		}
+	}
+}`;
+
+    const {loading, error, data} = useQuery(TABLE_QUERY);
+    if (loading || error) {
+        return false;
+    }
+
+    const temp = data.reportData.report.table.data;
+    console.log(temp);
+
+    temp.forEach((evt) => {
+        console.log(evt);
+    });
+
+    return false;
+}
+
+function getEventInformation(logCode, playerID, fightIds) {
+    fightIds = Array.isArray(fightIds) ? fightIds : [];
+    const COMBATANT_INFO_QUERY = gql`
+    {
+	reportData{
+		report(code:"${logCode}"){
+			events(startTime:0, endTime:99999999, fightIDs:[${fightIds}], dataType: CombatantInfo){
+				data
+			}
+		}
+	}
+}`;
+
+    const CAST_INFO_QUERY = gql`
+    {
+	reportData{
+		report(code:"${logCode}"){
+			events(startTime:0, endTime:99999999, fightIDs:[${fightIds}], dataType: Casts){
+				data
+			}
+		}
+	}
+}`;
+
+    // console.log(fights);
+    const {loading, error, data} = useQuery(COMBATANT_INFO_QUERY);
+    // const {loading, error, data} = useQuery(CAST_INFO_QUERY);
+
+    if (loading || error) {
+        console.log(error);
+        return false;
+    }
+    const combatantInfo = data.reportData.report.events.data;
+
+    if (loading || error) {
+        console.log(error);
+        return false;
+    }
+    // const castInfo = data.reportData.report.events.data;
+
+
+    combatantInfo.forEach((event) => {
+            // console.log(event);
+        if (event.type === "combatantinfo") {
+        }
+    })
+    // return false;
+
+
+    console.log(combatantInfo);
+    return combatantInfo;
+}
+
+function parseCombatantInfo(playerMap, combatantInfoList) {
+    const auraList = [];
+    console.log(playerMap);
+    combatantInfoList.forEach((event) => {
+        const player = playerMap.get(event.sourceID);
+        player.get('auras').push(event.auras);
+        // if (event.sourceID === 9) {
+        //     auraList.push(event.auras);
+        // }
+    });
+    // console.log(auraList);
+}
+
+function getAllFightInformation(logCode) {
+    const EVENT_QUERY = gql`
+    {
+	reportData{
+		report(code:"${logCode}"){
+			fights{
+				name
+				bossPercentage
+				encounterID
+				id
+			}
+		}
+	}
+}`;
+
+    const {loading, error, data} = useQuery(EVENT_QUERY);
+    if (loading || error) {
+        return false;
+    }
+
+    const temp = data.reportData.report.fights;
+    const fights = [];
+    temp.forEach((fight) => {
+        if (fight.encounterID !== 0) {
+            fights.push(fight.id);
+        }
+    })
+    return fights;
 }
 
 export default LogPage;
