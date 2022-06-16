@@ -7,39 +7,40 @@ import React from "react";
 import {gql, useQuery} from "@apollo/client";
 import Player from "../components/Player";
 import {useLocation} from "react-router-dom";
+import LogGridRow from "../components/LogGridRow";
 
 function LogPage() {
     const location = useLocation();
     const logCode = location.state.code;
-    console.log(location.state.code);
+    // console.log(location.state.code);
     const fightIds = getAllFightInformation(logCode);
     const playerMap = getPlayerInformation(logCode);
     const temp = getEventInformation(logCode, 9, fightIds);
     if (!temp || !playerMap) {
-        return 'Hold up';
+        return(
+            <Typography variant={"h2"}>
+                HOLD UP
+            </Typography>
+        );
     }
 
-    let playerClassMap = temp[0];
 
-    parseCombatantInfo(playerMap, temp);
+    const auraList = parseCombatantInfo(playerMap, temp);
+    const sortedMap = sortPlayersByNameAndClass(playerMap);
 
-    console.log(playerMap);
+    console.log(sortedMap);
 
     const arr = Array.from(playerMap, ([key, value]) => {
         return <Player id={value.get('id')} name={value.get('name')} playerClass={value.get('playerClass')} auras={value.get('auras')}/>;
     });
 
-    console.log(arr);
     let renderArr = [];
-    arr.forEach((player) => {
-        const gridRow = <>
-            <Grid item xs={2} key={player.props.name}> {player.props.name} </Grid>
-            <Grid item xs={2} key={"class" + player.props.id}> {player.props.playerClass} </Grid>
-            <Grid item xs={8} key={"aura" + player.props.id}> {player.props.auras.length} </Grid>
-        </>;
+
+    sortedMap.forEach((player) => {
+        const gridRow = <LogGridRow player={player} auras={auraList.get(player.get('id'))}/>
         renderArr.push(gridRow);
     })
-    // console.log(renderArr);
+
     return (
         <Container maxWidth={'95%'}>
             <Box display="flex" justifyContent="center" paddingY={2}>
@@ -53,21 +54,23 @@ function LogPage() {
                             Analyze
                         </Typography>
                     </Button>
-                    <Grid key={"GridContainer"} container spacing={2}>
-                        <Grid item xs={2} key={"GridHeaderName"}>
-                            <Typography variant={"h5"}>
-                                Player
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={2} key={"GridHeaderClass"}>
-                            <Typography variant={"h5"}>
-                                Class
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={8} key={"GridHeaderAuras"}>
-                            <Typography variant={"h5"}>
-                                Auras
-                            </Typography>
+                    <Grid key={"GridContainer"} container style={{backgroundColor: "gray", color: "white"}}>
+                        <Grid item container key={"GridHeaderName"} style={{backgroundColor: "darkslategray"}} padding={1}>
+                            <Grid item xs={2} key={"GridHeaderName"}>
+                                <Typography variant={"h5"}>
+                                    Player
+                                </Typography>
+                            </Grid>
+                            {/*<Grid item xs={2} key={"GridHeaderClass"}>*/}
+                            {/*    <Typography variant={"h5"}>*/}
+                            {/*        Class*/}
+                            {/*    </Typography>*/}
+                            {/*</Grid>*/}
+                            <Grid item xs={10} key={"GridHeaderAuras"}>
+                                <Typography variant={"h5"}>
+                                    Auras
+                                </Typography>
+                            </Grid>
                         </Grid>
                         {renderArr}
                     </Grid>
@@ -75,6 +78,37 @@ function LogPage() {
             </Box>
         </Container>
     );
+}
+
+function sortPlayersByNameAndClass(playerList) {
+    const classSortMap = new Map();
+    const playerNameSortMap = new Map();
+
+    playerList.forEach((player) => {
+        playerNameSortMap.set(player.get('name'), player);
+    });
+
+    const sortedPlayerNameMap = new Map([...playerNameSortMap].sort());
+
+    sortedPlayerNameMap.forEach((player) => {
+        if (!classSortMap.has(player.get('playerClass'))) {
+            classSortMap.set(player.get('playerClass'), new Map());
+        }
+        classSortMap.get(player.get('playerClass')).set(player.get('name'), player);
+    });
+
+    const sortedMap = new Map([...classSortMap].sort());
+
+    const fullySortedMap = new Map();
+    sortedMap.forEach((playerClass) => {
+        playerClass.forEach((player) => {
+            console.log(player);
+            fullySortedMap.set(player.get('name'), player)
+        })
+    })
+
+    console.log(fullySortedMap);
+    return fullySortedMap;
 }
 
 function getPlayerInformation(logCode) {
@@ -115,6 +149,8 @@ function getPlayerInformation(logCode) {
     for (const key of playerClassList.keys()) {
         playerClassList.set(key, new Map([...playerClassList.get(key)].sort()));
     }
+
+    // console.log(playerClassList);
 
     return playerList;
 }
@@ -168,7 +204,7 @@ function getEventInformation(logCode, playerID, fightIds) {
 	}
 }`;
 
-    // console.log(fights);
+    // console.log(fightIds);
     const {loading, error, data} = useQuery(COMBATANT_INFO_QUERY);
     // const {loading, error, data} = useQuery(CAST_INFO_QUERY);
 
@@ -177,14 +213,9 @@ function getEventInformation(logCode, playerID, fightIds) {
         return false;
     }
     const combatantInfo = data.reportData.report.events.data;
-
-    if (loading || error) {
-        console.log(error);
-        return false;
-    }
     // const castInfo = data.reportData.report.events.data;
-
-
+    // console.log("YOLOOOOO")
+    // console.log(combatantInfo);
     combatantInfo.forEach((event) => {
             // console.log(event);
         if (event.type === "combatantinfo") {
@@ -193,20 +224,29 @@ function getEventInformation(logCode, playerID, fightIds) {
     // return false;
 
 
-    console.log(combatantInfo);
+    // console.log(combatantInfo);
     return combatantInfo;
 }
 
 function parseCombatantInfo(playerMap, combatantInfoList) {
-    const auraList = [];
-    console.log(playerMap);
+    const auraList = new Map();
+    // console.log(playerMap);
     combatantInfoList.forEach((event) => {
         const player = playerMap.get(event.sourceID);
+        // console.log(event.auras);
         player.get('auras').push(event.auras);
+
+        if (!auraList.has(event.sourceID)) {
+            auraList.set(event.sourceID, [event.auras]);
+        } else {
+            auraList.get(event.sourceID).push(event.auras);
+        }
         // if (event.sourceID === 9) {
         //     auraList.push(event.auras);
         // }
     });
+
+    return auraList;
     // console.log(auraList);
 }
 
