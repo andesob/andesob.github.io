@@ -1,13 +1,12 @@
-import {Grid, Stack, TextField} from "@mui/material";
+import {CircularProgress, Grid, Stack} from "@mui/material";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
 import React from "react";
 import {gql, useQuery} from "@apollo/client";
-import Player from "../components/Player";
 import {useLocation} from "react-router-dom";
 import LogGridRow from "../components/LogGridRow";
+import LinkInput from "../components/LinkInput";
 
 function LogPage() {
     const location = useLocation();
@@ -17,10 +16,15 @@ function LogPage() {
     const playerMap = getPlayerInformation(logCode);
     const temp = getEventInformation(logCode, 9, fightIds);
     if (!temp || !playerMap) {
-        return(
-            <Typography variant={"h2"}>
-                HOLD UP
-            </Typography>
+        return (
+            <Container maxWidth={'95%'}>
+                <Box display="flex" justifyContent="center" paddingY={2}>
+                    <Stack spacing={2} alignItems="center">
+                        <LinkInput/>
+                        <CircularProgress/>
+                    </Stack>
+                </Box>
+            </Container>
         );
     }
 
@@ -28,16 +32,12 @@ function LogPage() {
     const auraList = parseCombatantInfo(playerMap, temp);
     const sortedMap = sortPlayersByNameAndClass(playerMap);
 
-    console.log(sortedMap);
-
-    const arr = Array.from(playerMap, ([key, value]) => {
-        return <Player id={value.get('id')} name={value.get('name')} playerClass={value.get('playerClass')} auras={value.get('auras')}/>;
-    });
+    // console.log(sortedMap);
 
     let renderArr = [];
 
     sortedMap.forEach((player) => {
-        const gridRow = <LogGridRow player={player} auras={auraList.get(player.get('id'))}/>
+        const gridRow = <LogGridRow key={"logGridRow" + player.get('id')} player={player} auras={auraList.get(player.get('id'))} encounters={fightIds}/>
         renderArr.push(gridRow);
     })
 
@@ -45,28 +45,20 @@ function LogPage() {
         <Container maxWidth={'95%'}>
             <Box display="flex" justifyContent="center" paddingY={2}>
                 <Stack spacing={2} alignItems="center">
-                    <Typography variant="h5">
-                        Insert link to warcraftlogs report in the field below. Currently only TBC logs are accepted.
-                    </Typography>
-                    <TextField id="filled-basic" variant="filled" hiddenLabel size="small" sx={{width: 1 / 2}}/>
-                    <Button variant="contained">
-                        <Typography>
-                            Analyze
-                        </Typography>
-                    </Button>
-                    <Grid key={"GridContainer"} container style={{backgroundColor: "gray", color: "white"}}>
+                    <LinkInput/>
+                    <Grid key={"GridContainer"} container style={{backgroundColor: "black", color: "white"}}>
                         <Grid item container key={"GridHeaderName"} style={{backgroundColor: "darkslategray"}} padding={1}>
                             <Grid item xs={2} key={"GridHeaderName"}>
                                 <Typography variant={"h5"}>
                                     Player
                                 </Typography>
                             </Grid>
-                            {/*<Grid item xs={2} key={"GridHeaderClass"}>*/}
-                            {/*    <Typography variant={"h5"}>*/}
-                            {/*        Class*/}
-                            {/*    </Typography>*/}
-                            {/*</Grid>*/}
-                            <Grid item xs={10} key={"GridHeaderAuras"}>
+                            <Grid item xs={2} key={"GridHeaderEncounters"}>
+                                <Typography variant={"h5"}>
+                                    Encounters
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={8} paddingLeft={2} key={"GridHeaderAuras"}>
                                 <Typography variant={"h5"}>
                                     Auras
                                 </Typography>
@@ -102,12 +94,12 @@ function sortPlayersByNameAndClass(playerList) {
     const fullySortedMap = new Map();
     sortedMap.forEach((playerClass) => {
         playerClass.forEach((player) => {
-            console.log(player);
+            // console.log(player);
             fullySortedMap.set(player.get('name'), player)
         })
     })
 
-    console.log(fullySortedMap);
+    // console.log(fullySortedMap);
     return fullySortedMap;
 }
 
@@ -155,30 +147,30 @@ function getPlayerInformation(logCode) {
     return playerList;
 }
 
-function getTableInformation(logCode, playerID) {
-    const TABLE_QUERY = gql`
-    {
-	reportData{
-		report(code:"${logCode}"){
-			table(startTime:386982, endTime:13327785)
-		}
-	}
-}`;
-
-    const {loading, error, data} = useQuery(TABLE_QUERY);
-    if (loading || error) {
-        return false;
-    }
-
-    const temp = data.reportData.report.table.data;
-    console.log(temp);
-
-    temp.forEach((evt) => {
-        console.log(evt);
-    });
-
-    return false;
-}
+// function getTableInformation(logCode, playerID) {
+//     const TABLE_QUERY = gql`
+//     {
+// 	reportData{
+// 		report(code:"${logCode}"){
+// 			table(startTime:386982, endTime:13327785)
+// 		}
+// 	}
+// }`;
+//
+//     const {loading, error, data} = useQuery(TABLE_QUERY);
+//     if (loading || error) {
+//         return false;
+//     }
+//
+//     const temp = data.reportData.report.table.data;
+//     // console.log(temp);
+//
+//     temp.forEach((evt) => {
+//         // console.log(evt);
+//     });
+//
+//     return false;
+// }
 
 function getEventInformation(logCode, playerID, fightIds) {
     fightIds = Array.isArray(fightIds) ? fightIds : [];
@@ -193,23 +185,23 @@ function getEventInformation(logCode, playerID, fightIds) {
 	}
 }`;
 
-    const CAST_INFO_QUERY = gql`
-    {
-	reportData{
-		report(code:"${logCode}"){
-			events(startTime:0, endTime:99999999, fightIDs:[${fightIds}], dataType: Casts){
-				data
-			}
-		}
-	}
-}`;
+//     const CAST_INFO_QUERY = gql`
+//     {
+// 	reportData{
+// 		report(code:"${logCode}"){
+// 			events(startTime:0, endTime:99999999, fightIDs:[${fightIds}], dataType: Casts){
+// 				data
+// 			}
+// 		}
+// 	}
+// }`;
 
     // console.log(fightIds);
     const {loading, error, data} = useQuery(COMBATANT_INFO_QUERY);
     // const {loading, error, data} = useQuery(CAST_INFO_QUERY);
 
     if (loading || error) {
-        console.log(error);
+        // console.log(error);
         return false;
     }
     const combatantInfo = data.reportData.report.events.data;

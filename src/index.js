@@ -43,7 +43,7 @@ root.render(
             <Router>
                 <ResponsiveAppBar/>
                 <Routes>
-                    <Route path="/" element={<Homepage client={client}/>}/>
+                    <Route path="/" element={<Homepage/>}/>
                     <Route path="/app" element={<App/>}/>
                     <Route path="/logpage" element={<LogPage/>}/>
                 </Routes>

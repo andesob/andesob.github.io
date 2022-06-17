@@ -12,10 +12,9 @@ import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import AdbIcon from '@mui/icons-material/Adb';
-import {Link} from "react-router-dom";
 import {useState} from "react";
 
-const pages = ['App'];
+const pages = [['Vetle', "http://localhost:3000"], ['Marius', "http://10.14.80.66:3000/"]];
 const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
 
 const ResponsiveAppBar = () => {
@@ -31,7 +30,7 @@ const ResponsiveAppBar = () => {
         setAnchorElNav(event.currentTarget);
     };
     const handleOpenUserMenu = (event) => {
-        console.log(event);
+        // console.log(event);
         setIsUserMenuOpen(event.currentTarget);
     };
 
@@ -96,8 +95,8 @@ const ResponsiveAppBar = () => {
                             }}
                         >
                             {pages.map((page) => (
-                                <MenuItem key={page} component={Link} to={page}>
-                                    <Typography textAlign="center">{page}</Typography>
+                                <MenuItem key={page[0]} component={Button} href={page[1]}>
+                                    <Typography textAlign="center">{page[0]}</Typography>
                                 </MenuItem>
                             ))}
                         </Menu>
@@ -123,11 +122,11 @@ const ResponsiveAppBar = () => {
                     </Typography>
                     <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
                         {pages.map((page) => (
-                            <Button key={page}
-                                component={Link} to={page}
+                            <Button key={page[0]}
+                                href={page[1]}
                                 sx={{ my: 2, color: 'white', display: 'block' }}
                             >
-                                {page}
+                                {page[0]}
                             </Button>
                         ))}
                     </Box>
